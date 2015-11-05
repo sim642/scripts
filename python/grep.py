@@ -57,6 +57,9 @@
 #     Config option for define default number of lines returned when using --head or --tail options.
 #     Can be overriden in the command with --number option.
 #
+#   * plugins.var.python.grep.output_buffer:
+#     Buffer to output to. Valid values: single, current
+#
 #
 #   TODO:
 #   * try to figure out why hook_process chokes in long outputs (using a tempfile as a
@@ -65,6 +68,9 @@
 #
 #
 #   History:
+#
+#   2015-10-25, Simmo Saan <simmo.saan@gmail.com>
+#   version 0.7.6: create option 'output_buffer'
 #
 #   2015-01-31, Nicd-
 #   version 0.7.5:
@@ -200,7 +206,7 @@ except ImportError:
 
 SCRIPT_NAME    = "grep"
 SCRIPT_AUTHOR  = "Elián Hanisch <lambdae2@gmail.com>"
-SCRIPT_VERSION = "0.7.5"
+SCRIPT_VERSION = "0.7.6"
 SCRIPT_LICENSE = "GPL3"
 SCRIPT_DESC    = "Search in buffers and logs"
 SCRIPT_COMMAND = "grep"
@@ -214,6 +220,7 @@ settings = {
 'show_summary'      : 'on',
 'size_limit'        : '2048',
 'default_tail_head' : '10',
+'output_buffer'     : 'single'
 }
 
 ### Class definitions ###
@@ -404,6 +411,15 @@ def get_config_int(config, allow_empty_string=False):
         error("Error while fetching config '%s'. Using default value '%s'." %(config, default))
         error("'%s' is not a number." %value)
         return int(default)
+
+def get_config_str(config):
+    value = weechat.config_get_plugin(config)
+    try:
+        return value
+    except KeyError:
+        default = settings[config]
+        error("Error while fetching config '%s'. Using default value '%s'." %(config, default))
+        return default
 
 def get_config_log_filter():
     filter = weechat.config_get_plugin('log_filter')
@@ -1232,6 +1248,9 @@ def format_options():
 
 def buffer_create(title=None):
     """Returns our buffer pointer, creates and cleans the buffer if needed."""
+    if get_config_str('output_buffer') == 'current':
+        return weechat.current_buffer()
+
     buffer = weechat.buffer_search('python', SCRIPT_NAME)
     if not buffer:
         buffer = weechat.buffer_new(SCRIPT_NAME, 'buffer_input', '', '', '')
